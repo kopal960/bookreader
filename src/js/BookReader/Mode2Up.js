@@ -278,6 +278,13 @@ export class Mode2Up {
     }
   }
 
+  setSpreadIndices() {
+    const targetLeaf = clamp(this.br.firstIndex, this.br.firstDisplayableIndex(), this.br.lastDisplayableIndex());
+    const currentSpreadIndices = this.book.getSpreadIndices(targetLeaf);
+    this.br.twoPage.currentIndexL = currentSpreadIndices[0];
+    this.br.twoPage.currentIndexR = currentSpreadIndices[1];
+  }
+
   /**
    * Calculates 2-page spread dimensions based on this.br.twoPage.currentIndexL and
    * this.br.twoPage.currentIndexR
@@ -295,14 +302,13 @@ export class Mode2Up {
       // set based on reduction factor
       spreadSize = this.getSpreadSizeFromReduce(firstIndex, secondIndex, this.br.reduce);
     }
-
     // Both pages together
-    this.br.twoPage.height = spreadSize.height;
-    this.br.twoPage.width = spreadSize.width;
+    this.br.twoPage.height = spreadSize.height || 0;
+    this.br.twoPage.width = spreadSize.width || 0;
 
     // Individual pages
-    this.br.twoPage.scaledWL = this.getPageWidth(firstIndex);
-    this.br.twoPage.scaledWR = this.getPageWidth(secondIndex);
+    this.br.twoPage.scaledWL = this.getPageWidth(firstIndex) || 0;
+    this.br.twoPage.scaledWR = this.getPageWidth(secondIndex) || 0;
 
     // Leaf edges
     this.br.twoPage.edgeWidth = spreadSize.totalLeafEdgeWidth; // The combined width of both edges
@@ -346,8 +352,7 @@ export class Mode2Up {
     this.br.twoPage.bookSpineDivLeft = this.br.twoPage.middle - (this.br.twoPage.bookSpineDivWidth >> 1);
     this.br.twoPage.bookSpineDivTop = this.br.twoPage.bookCoverDivTop;
 
-
-    this.br.reduce = spreadSize.reduce; // $$$ really set this here?
+    this.br.reduce = spreadSize.reduce < 0 ? this.br.reduce : spreadSize.reduce; // $$$ really set this here?
   }
 
   /**
@@ -392,17 +397,17 @@ export class Mode2Up {
     const heightOutsidePages = 2 * (this.br.twoPage.coverInternalPadding + this.br.twoPage.coverExternalPadding);
 
     ideal.width = (this.br.refs.$brContainer.width() - widthOutsidePages) >> 1;
-    ideal.width -= 10; // $$$ fudge factor
-    ideal.height = this.br.refs.$brContainer.height() - heightOutsidePages;
+    ideal.width = ideal.width > 10 ? ideal.width - 10 : 1; // $$$ fudge factor
 
-    ideal.height -= 15; // fudge factor
+    ideal.height = this.br.refs.$brContainer.height() - heightOutsidePages;
+    ideal.height = ideal.height > 15 ? ideal.height - 15 : 1; // $$$ fudge factor
 
     if (ideal.height / ratio <= ideal.width) {
       //use height
-      ideal.width = Math.floor(ideal.height / ratio);
+      ideal.width = Math.floor(ideal.height / ratio) || 1;
     } else {
       //use width
-      ideal.height = Math.floor(ideal.width * ratio);
+      ideal.height = Math.floor(ideal.width * ratio) || 1;
     }
 
     // $$$ check this logic with large spreads
@@ -1187,7 +1192,7 @@ export class Mode2Up {
     const { max, min } = Math;
     const { book } = this;
     const { currentIndexL, currentIndexR } = this.br.twoPage;
-    const ADJACENT_PAGES_TO_LOAD = 3;
+    const ADJACENT_PAGES_TO_LOAD = 2;
 
     // currentIndexL can be -1; getPage returns the last page of the book
     // when given -1, so need to prevent that.

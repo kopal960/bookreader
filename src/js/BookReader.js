@@ -123,7 +123,7 @@ BookReader.prototype.setup = function(options) {
 
   // Private properties below. Configuration should be done with options.
   /** @type {number} TODO: Make private */
-  this.reduce = 4;
+  this.reduce = 8; /* start very small */
   this.defaults = options.defaults;
   this.padding = options.padding;
 
@@ -1318,10 +1318,15 @@ BookReader.prototype.getPrevReadMode = function(mode) {
  * @param {number}
  * @param {object} [options]
  * @param {boolean} [options.suppressFragmentChange = false]
+ * @param {boolean} [options.onInit = false] - this
  */
 BookReader.prototype.switchMode = function(
   mode,
-  { suppressFragmentChange = false } = {}
+  {
+    suppressFragmentChange = false,
+    init = false,
+    pageFound = false
+  } = {}
 ) {
   // Skip checks before init() complete
   if (this.init.initComplete) {
@@ -1359,8 +1364,12 @@ BookReader.prototype.switchMode = function(
   } else {
     // $$$ why don't we save autofit?
     // this.twoPage.autofit = null; // Take zoom level from other mode
-    this.twoPageCalculateReductionFactors();
-    this.reduce = this.quantizeReduce(this.reduce, this.twoPage.reductionFactors);
+    // spread indices not set, so let's set them
+    if (init || !pageFound) {
+      this.setSpreadIndices();
+    }
+
+    this.twoPageCalculateReductionFactors(); // this sets this.twoPage && this.reduce
     this.prepareTwoPageView();
     this.twoPageCenterView(0.5, 0.5); // $$$ TODO preserve center
   }
@@ -1676,8 +1685,8 @@ BookReader.prototype._scrollAmount = function() {
 };
 
 BookReader.prototype.prefetchImg = function(index) {
-  var pageURI = this._getPageURI(index);
-  const pageURISrcset = this.options.useSrcSet ? this._getPageURISrcset(index) : [];
+  var pageURI = this._getPageURI(index, this.reduce);
+  const pageURISrcset = this.options.useSrcSet ? this._getPageURISrcset(index, this.reduce) : [];
 
   // Load image if not loaded or URI has changed (e.g. due to scaling)
   var loadImage = false;
@@ -1859,7 +1868,9 @@ exposeOverrideableMethod(Mode2Up, '_modes.mode2Up', 'jumpIndexForRightEdgePageX'
 /** @deprecated unused outside Mode2Up */
 BookReader.prototype.prefetch = Mode2Up.prototype.prefetch;
 exposeOverrideableMethod(Mode2Up, '_modes.mode2Up', 'prefetch', 'prefetch');
-
+/** @deprecated unused outside Mode2Up */
+BookReader.prototype.setSpreadIndices = Mode2Up.prototype.setSpreadIndices;
+exposeOverrideableMethod(Mode2Up, '_modes.mode2Up', 'setSpreadIndices', 'setSpreadIndices');
 /**
  * Immediately stop flip animations.  Callbacks are triggered.
  */
